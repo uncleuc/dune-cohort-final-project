@@ -1,0 +1,241 @@
+{% extends "chat/base.html" %}
+
+{% block title %}Conversations - PyChat{% endblock %}
+
+{% block extra_css %}
+<style>
+    .conversation-item {
+        transition: all 0.3s ease;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="flex h-full w-full gap-0">
+    <!-- Left Sidebar - Conversations List -->
+    <div class="flex flex-col w-full lg:w-1/3 bg-white border-r border-gray-200">
+        <!-- Header -->
+        <div class="px-5 py-4 border-b border-gray-200">
+            <h2 class="text-2xl font-bold text-gray-900 mb-4">Chats</h2>
+            
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+                <div class="relative w-full sm:w-[calc(100%-110px)]">
+                    <span class="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">🔍</span>
+                    <input type="text" placeholder="Search or start a new chat" class="w-full pl-10 pr-4 py-2 bg-gray-100 border border-gray-300 rounded-full focus:outline-none focus:border-indigo-600 focus:ring-2 focus:ring-indigo-100 text-sm">
+                </div>
+                <a href="{% url 'create_conversation' %}" class="inline-flex items-center justify-center whitespace-nowrap bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-4 rounded-full transition-colors text-sm">New Group</a>
+            </div>
+            
+            <!-- Filter Tabs -->
+            <div class="flex gap-2 overflow-x-auto pb-4 -px-5">
+                <button class="px-4 py-2 bg-indigo-600 text-white border border-indigo-600 rounded-full text-sm font-medium whitespace-nowrap hover:bg-indigo-700 transition-colors">All</button>
+                <button class="px-4 py-2 bg-transparent text-gray-900 border border-gray-300 rounded-full text-sm font-medium whitespace-nowrap hover:bg-gray-100 transition-colors">Unread</button>
+                <button class="px-4 py-2 bg-transparent text-gray-900 border border-gray-300 rounded-full text-sm font-medium whitespace-nowrap hover:bg-gray-100 transition-colors">Favourites</button>
+                <button class="px-4 py-2 bg-transparent text-gray-900 border border-gray-300 rounded-full text-sm font-medium whitespace-nowrap hover:bg-gray-100 transition-colors">Groups</button>
+            </div>
+        </div>
+        
+        <!-- Conversations List -->
+        <div class="flex-1 overflow-y-auto">
+            {% if conversations %}
+                {% for conversation in conversations %}
+                        <a href="{% url 'conversation_detail' conversation.id %}" class="conversation-item flex items-center gap-3 px-5 py-3 border-b border-gray-100 hover:bg-gray-50 transition-colors text-decoration-none text-inherit" data-conversation-id="{{ conversation.id }}" data-unread-count="{{ conversation.unread_count }}">
+                        <!-- Avatar -->
+                        <div class="w-14 h-14 rounded-full bg-gradient-to-br from-indigo-600 to-purple-600 flex items-center justify-center text-white text-lg font-bold flex-shrink-0">
+                            {{ conversation.display_name|first|upper }}
+                        </div>
+                        
+                        <!-- Conversation Info -->
+                        <div class="flex-1 min-w-0">
+                            <div class="flex justify-between items-baseline mb-1 gap-2">
+                                <span class="font-medium text-gray-900 text-sm">
+                                    {{ conversation.display_name }}
+                                </span>
+                                <div class="flex items-center gap-2">
+                                    {% if conversation.unread_count > 0 %}
+                                        <span class="inline-flex items-center justify-center h-6 min-w-[1.5rem] rounded-full bg-red-600 text-white text-[11px] font-semibold">{{ conversation.unread_count }}</span>
+                                    {% endif %}
+                                    <span class="text-xs text-gray-500">
+                                        {% if conversation.last_message %}
+                                            {{ conversation.last_message.created_at|date:"M d, g:i A" }}
+                                        {% endif %}
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="text-sm text-gray-600 truncate">
+                                {% if conversation.last_message %}
+                                    <strong>{{ conversation.last_message.sender.username }}:</strong> {{ conversation.last_message.content|truncatewords:5 }}
+                                {% else %}
+                                    No messages yet
+                                {% endif %}
+                            </div>
+                        </div>
+                    </a>
+                {% endfor %}
+            {% else %}
+                <!-- Empty State -->
+                <div class="flex flex-col items-center justify-center h-full text-center px-4">
+                    <div class="text-5xl mb-4 opacity-50">💬</div>
+                    <h3 class="text-lg font-semibold text-gray-900 mb-2">No chats yet</h3>
+                    <p class="text-gray-600 mb-6">Create a new conversation to get started.</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <div id="conversation-context-menu" class="hidden absolute z-50 w-44 rounded-lg border border-gray-200 bg-white shadow-lg py-2">
+        <button type="button" data-action="archive" class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Archive</button>
+        <button type="button" data-action="clear" class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Clear Chat</button>
+        <button type="button" data-action="delete" class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Delete Chat</button>
+        <button type="button" data-action="block" class="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100">Block</button>
+    </div>
+
+    <!-- Right Sidebar - Chat View Placeholder -->
+    <div class="hidden lg:flex flex-col flex-1 bg-white">
+        <div class="flex-1 flex items-center justify-center border-l border-gray-200">
+            <!-- Empty State -->
+            <div class="flex flex-col items-center justify-center text-center px-4">
+                <div class="text-5xl mb-4 opacity-50">💬</div>
+                <h3 class="text-lg font-semibold text-gray-900 mb-2">Pick a conversation</h3>
+                <p class="text-gray-600 mb-6">Select a chat from the left panel to start messaging.</p>
+                <a href="{% url 'friends' %}" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors text-sm">Start New Chat</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const contextMenu = document.getElementById('conversation-context-menu');
+    let activeConversationId = null;
+
+    function getCookie(name) {
+        const value = `; ${document.cookie}`;
+        const parts = value.split(`; ${name}=`);
+        if (parts.length === 2) return parts.pop().split(';').shift();
+        return '';
+    }
+
+    function hideContextMenu() {
+        if (contextMenu) {
+            contextMenu.classList.add('hidden');
+        }
+    }
+
+    function showToast(message, success = true) {
+        const toast = document.createElement('div');
+        toast.className = `fixed bottom-5 right-5 z-50 rounded-lg px-4 py-3 text-sm shadow-lg ${success ? 'bg-green-600 text-white' : 'bg-red-600 text-white'}`;
+        toast.textContent = message;
+        document.body.appendChild(toast);
+        setTimeout(() => toast.remove(), 3000);
+    }
+
+    document.querySelectorAll('.conversation-item').forEach(item => {
+        item.addEventListener('contextmenu', event => {
+            event.preventDefault();
+            activeConversationId = item.dataset.conversationId;
+            const { clientX: x, clientY: y } = event;
+            contextMenu.style.left = `${x}px`;
+            contextMenu.style.top = `${y}px`;
+            contextMenu.classList.remove('hidden');
+        });
+    });
+
+    document.body.addEventListener('click', event => {
+        if (!contextMenu.contains(event.target)) {
+            hideContextMenu();
+        }
+    });
+
+    contextMenu.querySelectorAll('button').forEach(button => {
+        button.addEventListener('click', async () => {
+            const action = button.dataset.action;
+            if (!activeConversationId) return;
+            const url = `{% url 'conversation_action' 0 %}`.replace('/0/', `/${activeConversationId}/`);
+            const formData = new FormData();
+            formData.append('action', action);
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': getCookie('csrftoken'),
+                },
+                body: formData,
+            });
+            const data = await response.json();
+            if (data.success) {
+                showToast(data.message, true);
+                if (action !== 'clear') {
+                    setTimeout(() => location.reload(), 500);
+                }
+            } else {
+                showToast(data.message || 'Action failed', false);
+            }
+            hideContextMenu();
+        });
+    });
+
+    const notificationsUrl = (window.location.protocol === 'https:' ? 'wss://' : 'ws://') + window.location.host + '/ws/notifications/';
+    let notificationsSocket = null;
+
+    function connectNotifications() {
+        notificationsSocket = new WebSocket(notificationsUrl);
+
+        notificationsSocket.onopen = () => {
+            console.log('Notifications socket open');
+        };
+
+        notificationsSocket.onmessage = event => {
+            const data = JSON.parse(event.data);
+            if (data.type === 'notification.message') {
+                updateConversationItem(data);
+            }
+        };
+
+        notificationsSocket.onclose = () => {
+            console.log('Notifications socket closed, reconnecting...');
+            setTimeout(connectNotifications, 1500);
+        };
+
+        notificationsSocket.onerror = error => {
+            console.warn('Notifications socket error', error);
+            notificationsSocket.close();
+        };
+    }
+
+    function updateConversationItem(data) {
+        const item = document.querySelector(`.conversation-item[data-conversation-id="${data.conversation_id}"]`);
+        if (!item) return;
+
+        const badge = item.querySelector('.inline-flex');
+        const headerRow = item.querySelector('.flex.justify-between.items-baseline.gap-2');
+        if (data.unread_count > 0) {
+            if (badge) {
+                badge.textContent = data.unread_count;
+            } else if (headerRow) {
+                const newBadge = document.createElement('span');
+                newBadge.className = 'inline-flex items-center justify-center h-6 min-w-[1.5rem] rounded-full bg-red-600 text-white text-[11px] font-semibold';
+                newBadge.textContent = data.unread_count;
+                headerRow.prepend(newBadge);
+            }
+        } else if (badge) {
+            badge.remove();
+        }
+
+        const timeLabel = item.querySelector('.text-xs.text-gray-500');
+        if (timeLabel) {
+            timeLabel.textContent = data.created_at ? new Date(data.created_at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : '';
+        }
+
+        const preview = item.querySelector('.text-sm.text-gray-600.truncate');
+        if (preview && data.last_message) {
+            preview.innerHTML = `<strong>${data.sender}:</strong> ${data.last_message}`;
+        }
+
+        const list = item.parentElement;
+        if (list && list.firstElementChild !== item) {
+            list.insertBefore(item, list.firstElementChild);
+        }
+    }
+
+    connectNotifications();
+</script>
+{% endblock %}

@@ -1,0 +1,15 @@
+{% extends "admin/login.html" %}
+
+{% block title %}PyChat Admin Login{% endblock %}
+
+{% block content %}
+<div class="max-w-lg mx-auto mt-16 rounded-3xl overflow-hidden shadow-2xl border border-slate-200">
+    <div class="bg-slate-950 p-8 text-white">
+        <h1 class="text-3xl font-semibold">PyChat Admin</h1>
+        <p class="mt-2 text-slate-300">Sign in with an administrator account to manage the site.</p>
+    </div>
+    <div class="bg-white p-8">
+        {{ block.super }}
+    </div>
+</div>
+{% endblock %}

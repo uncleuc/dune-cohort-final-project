@@ -1,0 +1,86 @@
+{% extends "chat/base.html" %}
+
+{% block title %}Find Friends - PyChat{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto">
+    <div class="bg-white rounded-lg shadow">
+        <div class="p-6 border-b border-gray-200 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <div>
+                <h2 class="text-3xl font-bold text-gray-900">Find Friends</h2>
+                <p class="text-gray-600 mt-2">Search by username and send friend requests privately.</p>
+            </div>
+            <div class="flex gap-3 flex-wrap">
+                <a href="{% url 'friends' %}" class="bg-gray-500 hover:bg-gray-600 text-white font-semibold py-2 px-4 rounded-lg transition-colors text-sm">Back to friends</a>
+                <a href="{% url 'conversation_list' %}" class="bg-gray-200 hover:bg-gray-300 text-gray-900 font-semibold py-2 px-4 rounded-lg transition-colors text-sm">Back to chats</a>
+            </div>
+        </div>
+
+        <div class="p-6 space-y-6">
+            <form method="get" class="flex gap-3 items-center">
+                <label for="q" class="sr-only">Search users</label>
+                <input id="q" name="q" type="text" placeholder="Search by username" value="{{ query }}" class="w-full md:w-2/3 px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-indigo-600 focus:ring-2 focus:ring-indigo-100" />
+                <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 px-5 rounded-lg transition-colors">Search</button>
+            </form>
+
+            {% if incoming_requests %}
+                <div class="rounded-lg border border-gray-200 bg-indigo-50 p-4">
+                    <div class="flex items-center justify-between mb-4">
+                        <div>
+                            <h3 class="text-xl font-semibold text-gray-900">Friend Requests</h3>
+                            <p class="text-gray-600 text-sm">Requests sent to you appear at the top.</p>
+                        </div>
+                    </div>
+                    <div class="space-y-4">
+                        {% for request in incoming_requests %}
+                            <div class="bg-white rounded-lg border border-gray-200 p-4 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                                <div>
+                                    <p class="text-lg font-semibold text-gray-900">{{ request.from_user.username }}</p>
+                                    <p class="text-gray-600 text-sm">{{ request.from_user.email }}</p>
+                                    <p class="text-gray-500 text-xs mt-1">Received {{ request.created_at|date:"M d, g:i A" }}</p>
+                                </div>
+                                <form method="post" class="flex gap-3 items-center">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="action" value="accept_request" />
+                                    <input type="hidden" name="friend_request_id" value="{{ request.id }}" />
+                                    <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors">Accept</button>
+                                </form>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            {% endif %}
+
+            <div class="rounded-lg border border-gray-200 p-4 bg-white">
+                <div class="mb-4">
+                    <h3 class="text-xl font-semibold text-gray-900">People You May Know</h3>
+                    <p class="text-gray-600 text-sm">Send a friend request to start chatting with someone new.</p>
+                </div>
+
+                {% if users %}
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {% for user_item in users %}
+                            <div class="border border-gray-200 rounded-lg p-4 flex flex-col justify-between gap-4">
+                                <div>
+                                    <p class="text-lg font-semibold text-gray-900">{{ user_item.username }}</p>
+                                    <p class="text-gray-600 text-sm">{{ user_item.email }}</p>
+                                </div>
+                                <form method="post" class="text-right">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="action" value="send_request" />
+                                    <input type="hidden" name="target_user_id" value="{{ user_item.id }}" />
+                                    <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors">Add Friend</button>
+                                </form>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="rounded-lg border border-dashed border-gray-300 bg-gray-50 p-6 text-center text-gray-600">
+                        No users found. Try a different username or check back later.
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

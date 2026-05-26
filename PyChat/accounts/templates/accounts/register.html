@@ -1,0 +1,71 @@
+{% extends "chat/base.html" %}
+
+{% block title %}Register - PyChat{% endblock %}
+
+{% block content %}
+<div class="flex justify-center items-center min-h-screen -m-10">
+    <div class="w-full max-w-md">
+        <div class="bg-white rounded-lg shadow-lg overflow-hidden">
+            <div class="bg-indigo-600 text-white p-6">
+                <h4 class="text-xl font-semibold m-0">Create Your PyChat Account</h4>
+            </div>
+            <div class="p-6">
+                {% if form.non_field_errors %}
+                    <div class="mb-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded">
+                        {% for error in form.non_field_errors %}
+                            <p>{{ error }}</p>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+
+                <form method="post" class="space-y-4">
+                    {% csrf_token %}
+
+                    <div>
+                        {{ form.username.label_tag }}
+                        {{ form.username }}
+                        {% if form.username.errors %}
+                            <p class="mt-2 text-sm text-red-600">{{ form.username.errors|striptags }}</p>
+                        {% endif %}
+                        {% if form.username.help_text %}
+                            <p class="text-gray-500 text-sm">{{ form.username.help_text }}</p>
+                        {% endif %}
+                    </div>
+
+                    <div>
+                        {{ form.email.label_tag }}
+                        {{ form.email }}
+                        {% if form.email.errors %}
+                            <p class="mt-2 text-sm text-red-600">{{ form.email.errors|striptags }}</p>
+                        {% endif %}
+                    </div>
+
+                    <div>
+                        {{ form.password.label_tag }}
+                        {{ form.password }}
+                        {% if form.password.errors %}
+                            <p class="mt-2 text-sm text-red-600">{{ form.password.errors|striptags }}</p>
+                        {% endif %}
+                        {% if form.password.help_text %}
+                            <p class="text-gray-500 text-sm">{{ form.password.help_text }}</p>
+                        {% endif %}
+                    </div>
+
+                    <div>
+                        {{ form.password_confirm.label_tag }}
+                        {{ form.password_confirm }}
+                        {% if form.password_confirm.errors %}
+                            <p class="mt-2 text-sm text-red-600">{{ form.password_confirm.errors|striptags }}</p>
+                        {% endif %}
+                    </div>
+
+                    <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors">Register</button>
+                </form>
+            </div>
+            <div class="bg-gray-50 p-4 text-center border-t border-gray-200">
+                Already have an account? <a href="{% url 'accounts:login' %}" class="text-indigo-600 hover:text-indigo-800 font-semibold">Login here</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

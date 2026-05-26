@@ -99,3 +99,4 @@ Add deployment documentation and a clear startup guide for the application envir
 2. Create a dependency manifest such as `requirements.txt`
 3. Harden the deployment config for production (Redis, env variables, static/media setup)
 4. Confirm whether a REST API / DRF integration is required by the course rubric# dune-cohort-final-project
+# dune-cohort-final-project

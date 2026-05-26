@@ -1,0 +1,38 @@
+{% extends "chat/base.html" %}
+
+{% block title %}Friends - PyChat{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl">
+    <div class="bg-white rounded-lg shadow">
+        <div class="p-6 border-b border-gray-200 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <div>
+                <h2 class="text-3xl font-bold text-gray-900">Friends</h2>
+                <p class="text-gray-600 mt-2">People you can message in PyChat.</p>
+            </div>
+            <div class="flex gap-3 flex-wrap">
+                <a href="{% url 'find_friends' %}" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors text-sm">Find Friends</a>
+                <a href="{% url 'conversation_list' %}" class="bg-gray-500 hover:bg-gray-600 text-white font-semibold py-2 px-4 rounded-lg transition-colors text-sm">Back to chats</a>
+            </div>
+        </div>
+        
+        <div class="p-6">
+            {% if friends %}
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {% for friend in friends %}
+                        <div class="bg-white border border-gray-200 rounded-lg shadow-sm hover:shadow-md transition-shadow p-6">
+                            <h5 class="text-lg font-semibold text-gray-900 mb-2">{{ friend.username }}</h5>
+                            <p class="text-gray-600 text-sm mb-4">{{ friend.email }}</p>
+                            <a href="{% url 'direct_chat' friend.id %}" class="inline-block bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors text-sm">Start Chat</a>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="bg-blue-50 border border-blue-200 text-blue-800 p-4 rounded-lg">
+                    No friends yet. Invite users or create a conversation.
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

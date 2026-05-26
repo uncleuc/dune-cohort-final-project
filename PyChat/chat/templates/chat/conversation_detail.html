@@ -1,0 +1,601 @@
+{% extends "chat/base.html" %}
+
+{% block title %}{{ conversation.display_name|default:conversation.name|default:"Conversation" }} - PyChat{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Custom scrollbar styling for messages only */
+    #messages::-webkit-scrollbar {
+        width: 8px;
+    }
+    #messages::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 10px;
+    }
+    #messages::-webkit-scrollbar-thumb {
+        background: #888;
+        border-radius: 10px;
+    }
+    #messages::-webkit-scrollbar-thumb:hover {
+        background: #555;
+    }
+    .chat-container {
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+        overflow: hidden;
+    }
+    .chat-header {
+        flex-shrink: 0;
+    }
+    #messages {
+        flex: 1;
+        min-height: 0;
+        overflow-y: auto;
+        overflow-x: hidden;
+    }
+    #ws-status {
+        flex-shrink: 0;
+    }
+    #input-area {
+        flex-shrink: 0;
+        border-top: 1px solid #e5e7eb;
+        background-color: white;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="chat-container">
+    <!-- Chat Header -->
+    <div class="chat-header px-6 py-4 border-b border-gray-200 flex justify-between items-start">
+        <div>
+            <h2 class="text-lg font-semibold text-gray-900 m-0">{{ conversation.display_name|default:conversation.name|default:"Conversation" }}</h2>
+            <div class="text-sm text-gray-600 mt-1">
+                {% if conversation.is_group %}
+                    Group • {{ conversation.participants.count }} members
+                {% else %}
+                    Private
+                {% endif %}
+            </div>
+            <div class="text-sm text-gray-600 mt-1" id="presence-status">Connecting...</div>
+            <div class="text-sm text-indigo-600 mt-1" id="typing-indicator"></div>
+        </div>
+        <div id="message-context-menu" class="hidden absolute z-50 w-44 rounded-lg border border-gray-200 bg-white shadow-lg py-2">
+            <button type="button" data-action="edit" class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Edit Message</button>
+            <button type="button" data-action="delete" class="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100">Delete Message</button>
+        </div>
+    </div>
+
+    <!-- Messages Container -->
+    <div id="messages" class="px-6 py-4 flex flex-col gap-2 bg-white">
+        {% for message in chat_messages %}
+            <div class="flex {% if message.sender == user %}justify-end{% else %}justify-start{% endif %} mb-3" data-message-id="{{ message.id }}" data-own-message="{% if message.sender == user %}true{% else %}false{% endif %}">
+                <div class="{% if message.sender == user %}max-w-xs{% else %}max-w-md{% endif %}">
+                    {% if message.sender != user %}
+                        <div class="text-xs text-gray-600 mb-1">{{ message.sender.username }}</div>
+                    {% endif %}
+                    <div class="{% if message.sender == user %}bg-blue-100 text-gray-900{% else %}bg-gray-100 text-gray-900{% endif %} rounded-lg px-4 py-3">
+                        {% if message.deleted %}
+                            <p class="text-sm break-words italic text-gray-500">Message deleted</p>
+                        {% else %}
+                            <p class="text-sm break-words">{{ message.content }}</p>
+                            {% if message.attachment %}
+                                <div class="bg-gray-200 p-2 rounded mt-2">
+                                    <a href="{{ message.attachment.url }}" target="_blank" class="text-blue-600 hover:text-blue-800 text-sm font-medium">📎 Download</a>
+                                </div>
+                            {% endif %}
+                        {% endif %}
+                        <div class="flex items-center justify-between gap-2 mt-1 text-xs text-gray-600">
+                            <div>{{ message.created_at|date:"H:i" }}{% if message.edited %} • edited{% endif %}</div>
+                            {% if message.sender == user and message.read_by.exists %}
+                                <div class="text-right text-indigo-600">Read</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        {% empty %}
+            <div class="text-center text-gray-500 py-8">
+                No messages yet. Start the conversation!
+            </div>
+        {% endfor %}
+    </div>
+
+    <!-- Status Message -->
+    <div id="ws-status" class="hidden px-6 py-2 text-sm bg-blue-100 border border-blue-300 text-blue-800 rounded" role="status"></div>
+
+    <!-- Input Area (Fixed at bottom) -->
+    <div id="input-area" class="px-6 py-4">
+        <!-- Message Form -->
+        <form id="message-form" class="flex gap-2 mb-3">
+            {% csrf_token %}
+            <input type="text" id="id_content" name="content" placeholder="Type a message..." class="flex-1 px-4 py-2 bg-gray-100 rounded-full border border-gray-300 focus:outline-none focus:border-indigo-600 focus:ring-2 focus:ring-indigo-100 text-sm" required>
+            <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-6 py-2 rounded-full transition-colors text-sm">Send</button>
+        </form>
+        
+        <!-- Attachment Form -->
+        <form id="attachment-form" class="flex gap-2">
+            {% csrf_token %}
+            <input type="file" id="id_attachment" name="attachment" class="flex-1 px-4 py-2 bg-gray-100 rounded-full border border-gray-300 focus:outline-none focus:border-indigo-600 focus:ring-2 focus:ring-indigo-100 text-sm" required>
+            <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-6 py-2 rounded-full transition-colors text-sm">Upload</button>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const wsUrl = (window.location.protocol === 'https:' ? 'wss://' : 'ws://') + window.location.host + '/ws/chat/{{ conversation.id }}/';
+    const sendUrl = '{% url "send_message" conversation.id %}';
+    const uploadUrl = '{% url "upload_attachment" conversation.id %}';
+    const historyUrl = '{% url "message_history" conversation.id %}';
+    const editUrlTemplate = '{% url "edit_message" 0 %}';
+    const deleteUrlTemplate = '{% url "delete_message" 0 %}';
+    const statusEl = document.getElementById('ws-status');
+    const presenceEl = document.getElementById('presence-status');
+    const typingEl = document.getElementById('typing-indicator');
+    const messagesDiv = document.getElementById('messages');
+    const messageContextMenu = document.getElementById('message-context-menu');
+    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+    const contentInput = document.getElementById('id_content');
+    const otherLastSeen = '{% if other_presence and other_presence.last_seen %}{{ other_presence.last_seen|date:"c" }}{% endif %}';
+    const otherUserName = '{% if other_presence %}{{ other_presence.user.username }}{% else %}{{ "" }}{% endif %}';
+    let ws = null;
+    let pendingMessages = [];
+    let pollInterval = null;
+    let typingTimeout = null;
+    let activeMessageId = null;
+    let activeMessageText = '';
+
+    function setStatus(text, type = 'secondary') {
+        statusEl.classList.remove('hidden', 'bg-blue-100', 'border-blue-300', 'text-blue-800', 'bg-green-100', 'border-green-300', 'text-green-800', 'bg-yellow-100', 'border-yellow-300', 'text-yellow-800', 'bg-red-100', 'border-red-300', 'text-red-800');
+        
+        const classMap = {
+            'secondary': ['bg-blue-100', 'border-blue-300', 'text-blue-800'],
+            'success': ['bg-green-100', 'border-green-300', 'text-green-800'],
+            'warning': ['bg-yellow-100', 'border-yellow-300', 'text-yellow-800'],
+            'danger': ['bg-red-100', 'border-red-300', 'text-red-800'],
+            'info': ['bg-blue-100', 'border-blue-300', 'text-blue-800'],
+        };
+        
+        const classes = classMap[type] || classMap['secondary'];
+        classes.forEach(cls => statusEl.classList.add(cls));
+        
+        statusEl.classList.remove('hidden');
+        statusEl.textContent = text;
+    }
+
+    function formatLocalTime(timestamp) {
+        if (!timestamp) {
+            return '';
+        }
+        const date = new Date(timestamp);
+        return date.toLocaleString([], {month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'});
+    }
+
+    function updatePresence(onlineUsers) {
+        const others = (onlineUsers || []).filter(u => u !== '{{ user.username }}');
+        if (others.length > 0) {
+            if (others.length === 1) {
+                presenceEl.textContent = `${others[0]} is online`;
+            } else {
+                presenceEl.textContent = `${others.length} users are online`;
+            }
+            return;
+        }
+
+        if (otherLastSeen) {
+            presenceEl.textContent = `${otherUserName} last seen ${formatLocalTime(otherLastSeen)}`;
+            return;
+        }
+
+        presenceEl.textContent = 'Offline';
+    }
+
+    function updateTyping(user, isTyping) {
+        if (!user || user === '{{ user.username }}') {
+            return;
+        }
+        typingEl.textContent = isTyping ? `${user} is typing...` : '';
+    }
+
+    function createMessageElement(data) {
+        const messageGroup = document.createElement('div');
+        const isOwn = data.sender === '{{ user.username }}';
+        messageGroup.className = 'flex ' + (isOwn ? 'justify-end' : 'justify-start') + ' mb-3';
+        messageGroup.dataset.messageId = data.id || data.message_id;
+        messageGroup.dataset.ownMessage = isOwn ? 'true' : 'false';
+
+        const container = document.createElement('div');
+        container.className = isOwn ? 'max-w-xs' : 'max-w-md';
+
+        let html = '';
+        if (!isOwn) {
+            html += '<div class="text-xs text-gray-600 mb-1">' + data.sender + '</div>';
+        }
+
+        html += '<div class="' + (isOwn ? 'bg-blue-100' : 'bg-gray-100') + ' text-gray-900 rounded-lg px-4 py-3">';
+
+        if (data.deleted) {
+            html += '<p class="text-sm break-words italic text-gray-500">Message deleted</p>';
+        } else {
+            html += '<p class="text-sm break-words">' + (data.content || '') + '</p>';
+            if (data.attachment_url) {
+                const name = data.attachment_name ? data.attachment_name.substring(0, 20) : 'Download';
+                html += '<div class="bg-gray-200 p-2 rounded mt-2"><a href="' + data.attachment_url + '" target="_blank" class="text-blue-600 hover:text-blue-800 text-sm font-medium">📎 ' + name + '</a></div>';
+            }
+        }
+
+        html += '<div class="flex items-center justify-between gap-2 mt-1 text-xs text-gray-600">';
+        html += '<div>' + new Date(data.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) + (data.edited ? ' • edited' : '') + '</div>';
+        if (isOwn && data.read_by_count) {
+            html += '<div class="text-right text-indigo-600">Read</div>';
+        }
+        html += '</div>';
+
+
+        html += '</div>';
+        container.innerHTML = html;
+        messageGroup.appendChild(container);
+        return messageGroup;
+    }
+
+    function appendMessage(data) {
+        const existing = messagesDiv.querySelector(`[data-message-id="${data.id || data.message_id}"]`);
+        if (existing) {
+            const newEl = createMessageElement(data);
+            existing.replaceWith(newEl);
+            return;
+        }
+        const elem = createMessageElement(data);
+        messagesDiv.appendChild(elem);
+        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    }
+
+    function updateMessageReadStatus(messageIds) {
+        messageIds.forEach(id => {
+            const element = messagesDiv.querySelector(`[data-message-id="${id}"]`);
+            if (!element) return;
+            const receipt = element.querySelector('.text-indigo-600');
+            if (receipt) return;
+            const meta = element.querySelector('.flex.items-center.justify-between');
+            if (meta) {
+                const receiptEl = document.createElement('div');
+                receiptEl.className = 'text-right text-indigo-600';
+                receiptEl.textContent = 'Read';
+                meta.appendChild(receiptEl);
+            }
+        });
+    }
+
+    function editMessage(messageId, currentContent) {
+        const newContent = prompt('Edit message', currentContent || '');
+        if (newContent === null || newContent.trim() === '') return;
+        const url = editUrlTemplate.replace('/0/', '/' + messageId + '/');
+        fetch(url, {
+            method: 'POST',
+            headers: {'X-CSRFToken': csrfToken, 'Content-Type': 'application/x-www-form-urlencoded'},
+            body: new URLSearchParams({content: newContent}),
+            credentials: 'same-origin',
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.error) throw new Error(data.error || 'Edit failed');
+            setStatus('Message edited', 'success');
+        })
+        .catch(err => setStatus(err.message || 'Edit failed', 'danger'));
+    }
+
+    function deleteMessage(messageId) {
+        if (!confirm('Delete this message?')) return;
+        const url = deleteUrlTemplate.replace('/0/', '/' + messageId + '/');
+        fetch(url, {
+            method: 'POST',
+            headers: {'X-CSRFToken': csrfToken},
+            credentials: 'same-origin',
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.error) throw new Error(data.error || 'Delete failed');
+            setStatus('Message deleted', 'success');
+        })
+        .catch(err => setStatus(err.message || 'Delete failed', 'danger'));
+    }
+
+    function renderMessages(messages) {
+        messagesDiv.innerHTML = '';
+        if (!messages.length) {
+            const empty = document.createElement('div');
+            empty.className = 'text-center text-gray-500 py-8';
+            empty.textContent = 'No messages yet. Start the conversation!';
+            messagesDiv.appendChild(empty);
+            return;
+        }
+        messages.forEach(appendMessage);
+    }
+
+    function fetchHistory() {
+        fetch(historyUrl, {credentials: 'same-origin'})
+        .then(r => r.json())
+        .then(data => {
+            if (data.messages) {
+                renderMessages(data.messages);
+                if (ws && ws.readyState === WebSocket.OPEN) {
+                    ws.send(JSON.stringify({action: 'read'}));
+                    notifyConversationRead();
+                }
+            }
+        })
+        .catch(err => console.error('History fetch error:', err));
+    }
+
+    function sendMessageFallback(payload) {
+        return fetch(sendUrl, {
+            method: 'POST',
+            headers: {'X-CSRFToken': csrfToken, 'Content-Type': 'application/x-www-form-urlencoded'},
+            body: new URLSearchParams(payload),
+            credentials: 'same-origin',
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.error) throw new Error(data.error);
+            appendMessage(data);
+            setStatus('Message sent', 'success');
+        });
+    }
+
+    function startPolling() {
+        if (pollInterval) return;
+        setStatus('Using polling mode', 'warning');
+        fetchHistory();
+        pollInterval = setInterval(fetchHistory, 5000);
+    }
+
+    function stopPolling() {
+        if (pollInterval) {
+            clearInterval(pollInterval);
+            pollInterval = null;
+        }
+    }
+
+    function reportTyping(isTyping) {
+        if (!ws || ws.readyState !== WebSocket.OPEN) return;
+        ws.send(JSON.stringify({action: 'typing', is_typing: isTyping}));
+    }
+
+    let notificationsSocket = null;
+    let readNotificationInterval = null;
+
+    function notifyConversationRead() {
+        const conversationId = '{{ conversation.id }}';
+        const readNotif = {
+            type: 'notification.message',
+            conversation_id: parseInt(conversationId),
+            unread_count: 0,
+            sender: '{{ user.username }}',
+            last_message: '',
+            created_at: new Date().toISOString(),
+        };
+        
+        const sendReadNotif = () => {
+            if (notificationsSocket && notificationsSocket.readyState === WebSocket.OPEN) {
+                notificationsSocket.send(JSON.stringify(readNotif));
+                console.log('[Badge] Read notification sent to conversation list');
+                return true;
+            }
+            return false;
+        };
+        
+        if (!sendReadNotif()) {
+            console.warn('[Badge] Notifications socket not ready, retrying aggressively every 300ms');
+            clearInterval(readNotificationInterval);
+            let retryCount = 0;
+            readNotificationInterval = setInterval(() => {
+                if (sendReadNotif()) {
+                    console.log('[Badge] Read notification succeeded after retry');
+                    clearInterval(readNotificationInterval);
+                } else if (retryCount++ > 20) {
+                    console.error('[Badge] Failed to send read notification after 20 retries');
+                    clearInterval(readNotificationInterval);
+                }
+            }, 300);
+        }
+    }
+
+    function connectNotificationsFromDetail() {
+        const notificationsUrl = (window.location.protocol === 'https:' ? 'wss://' : 'ws://') + window.location.host + '/ws/notifications/';
+        notificationsSocket = new WebSocket(notificationsUrl);
+
+        notificationsSocket.onopen = () => {
+            console.log('[Badge] Notifications socket open, sending read status');
+            notifyConversationRead();
+        };
+
+        notificationsSocket.onclose = () => {
+            console.log('[Badge] Notifications socket closed');
+            clearInterval(readNotificationInterval);
+            setTimeout(connectNotificationsFromDetail, 3000);
+        };
+
+        notificationsSocket.onerror = error => {
+            console.warn('[Badge] Notifications socket error', error);
+            clearInterval(readNotificationInterval);
+            notificationsSocket.close();
+        };
+    }
+
+    connectNotificationsFromDetail();
+
+    function connectWebSocket() {
+        if (ws && (ws.readyState === WebSocket.CONNECTING || ws.readyState === WebSocket.OPEN)) return;
+        ws = new WebSocket(wsUrl);
+        setStatus('Connecting...', 'info');
+        ws.onopen = () => {
+            setStatus('Connected', 'success');
+            console.info('WebSocket connected:', wsUrl);
+            presenceEl.textContent = 'You are online';
+            stopPolling();
+            fetchHistory();
+            ws.send(JSON.stringify({action: 'read'}));
+            notifyConversationRead();
+            while (pendingMessages.length) {
+                ws.send(JSON.stringify(pendingMessages.shift()));
+            }
+        };
+        ws.onmessage = (e) => {
+            const data = JSON.parse(e.data);
+            switch (data.type) {
+                case 'message':
+                    appendMessage(data);
+                    break;
+                case 'typing':
+                    updateTyping(data.user, data.is_typing);
+                    break;
+                case 'presence':
+                    updatePresence(data.online);
+                    break;
+                case 'read_receipt':
+                    updateMessageReadStatus(data.message_ids || []);
+                    break;
+                case 'message_edit':
+                    appendMessage({
+                        message_id: data.message_id,
+                        id: data.message_id,
+                        sender: data.sender || '{{ user.username }}',
+                        content: data.content,
+                        created_at: data.created_at || new Date().toISOString(),
+                        edited: data.edited,
+                        deleted: false,
+                    });
+                    break;
+                case 'message_delete':
+                    appendMessage({
+                        message_id: data.message_id,
+                        id: data.message_id,
+                        sender: data.sender || '{{ user.username }}',
+                        content: '',
+                        created_at: data.created_at || new Date().toISOString(),
+                        edited: false,
+                        deleted: true,
+                    });
+                    break;
+                default:
+                    console.log('Unknown WebSocket event', data);
+            }
+        };
+        ws.onerror = (e) => {
+            console.warn('WebSocket error', e);
+            setStatus('WebSocket error', 'danger');
+        };
+        ws.onclose = () => {
+            console.warn('WebSocket closed, retrying in 3s');
+            setStatus('Disconnected - retrying...', 'danger');
+            startPolling();
+            setTimeout(connectWebSocket, 3000);
+        };
+    }
+
+    function showMessageContextMenu(x, y, messageId, messageText) {
+        if (!messageContextMenu) return;
+        activeMessageId = messageId;
+        activeMessageText = messageText;
+        messageContextMenu.style.left = `${x}px`;
+        messageContextMenu.style.top = `${y}px`;
+        messageContextMenu.classList.remove('hidden');
+    }
+
+    function hideMessageContextMenu() {
+        if (!messageContextMenu) return;
+        messageContextMenu.classList.add('hidden');
+        activeMessageId = null;
+        activeMessageText = '';
+    }
+
+    if (messageContextMenu) {
+        messageContextMenu.querySelectorAll('button').forEach(button => {
+            button.addEventListener('click', () => {
+                const action = button.dataset.action;
+                if (!activeMessageId) return;
+                if (action === 'edit') {
+                    editMessage(activeMessageId, activeMessageText);
+                }
+                if (action === 'delete') {
+                    deleteMessage(activeMessageId);
+                }
+                hideMessageContextMenu();
+            });
+        });
+    }
+
+    messagesDiv.addEventListener('contextmenu', function(event) {
+        const messageGroup = event.target.closest('[data-message-id]');
+        if (!messageGroup) return;
+        if (messageGroup.dataset.ownMessage !== 'true') return;
+        event.preventDefault();
+        const messageTextEl = messageGroup.querySelector('p');
+        showMessageContextMenu(event.pageX, event.pageY, messageGroup.dataset.messageId, messageTextEl ? messageTextEl.textContent : '');
+    });
+
+    document.body.addEventListener('click', function(event) {
+        if (messageContextMenu && !messageContextMenu.contains(event.target)) {
+            hideMessageContextMenu();
+        }
+    });
+
+    connectWebSocket();
+
+    document.getElementById('message-form').addEventListener('submit', function(e) {
+        e.preventDefault();
+        const content = contentInput.value.trim();
+        if (!content) return;
+        const payload = {message: content};
+        if (ws && ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify(payload));
+        } else {
+            pendingMessages.push(payload);
+            sendMessageFallback({content}).catch(err => setStatus('Send failed', 'danger'));
+            if (!ws || ws.readyState === WebSocket.CLOSED) connectWebSocket();
+        }
+        contentInput.value = '';
+        contentInput.focus();
+        reportTyping(false);
+    });
+
+    document.getElementById('attachment-form').addEventListener('submit', function(e) {
+        e.preventDefault();
+        const form = e.target;
+        fetch(uploadUrl, {method: 'POST', body: new FormData(form), credentials: 'same-origin'})
+        .then(r => r.json())
+        .then(data => {
+            if (data.error) throw new Error(data.error);
+            appendMessage(data);
+            form.reset();
+            setStatus('Attachment sent', 'success');
+        })
+        .catch(err => setStatus('Upload failed', 'danger'));
+    });
+
+    contentInput.addEventListener('input', function() {
+        reportTyping(true);
+        clearTimeout(typingTimeout);
+        typingTimeout = setTimeout(() => reportTyping(false), 1200);
+    });
+
+    messagesDiv.addEventListener('click', function(event) {
+        const button = event.target.closest('[data-action]');
+        if (!button) return;
+        const messageGroup = button.closest('[data-message-id]');
+        if (!messageGroup) return;
+        const messageId = messageGroup.dataset.messageId;
+        const contentEl = messageGroup.querySelector('p');
+        const currentText = contentEl ? contentEl.textContent : '';
+        if (button.dataset.action === 'edit') {
+            editMessage(messageId, currentText);
+        }
+        if (button.dataset.action === 'delete') {
+            deleteMessage(messageId);
+        }
+    });
+</script>
+{% endblock %}

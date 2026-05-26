@@ -1,0 +1,36 @@
+{% extends "admin/base_site.html" %}
+
+{% block title %}PyChat Admin{% endblock %}
+
+{% block branding %}
+<h1 id="site-name">
+    <a href="{% url 'admin:index' %}" class="text-3xl font-semibold text-slate-900">PyChat Admin</a>
+</h1>
+{% endblock %}
+
+{% block extrahead %}
+{{ block.super }}
+<style>
+    body {
+        background: #f8fafc;
+    }
+    #header, #header h1, .module caption {
+        background: #0f172a !important;
+        color: #f8fafc !important;
+    }
+    .breadcrumbs, .brand {
+        background: #0f172a !important;
+    }
+    .module caption {
+        border-color: #e2e8f0 !important;
+    }
+    .submit-row input, .submit-row a {
+        background-color: #2563eb !important;
+        border-color: #2563eb !important;
+        color: #ffffff !important;
+    }
+    .submit-row input:hover, .submit-row a:hover {
+        background-color: #1d4ed8 !important;
+    }
+</style>
+{% endblock %}

@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}PyChat{% endblock %}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Sidebar animations */
+        .sidebar {
+            transition: width 0.25s ease;
+        }
+        .sidebar:hover {
+            width: 220px;
+        }
+        .sidebar-item .label {
+            max-width: 0;
+            overflow: hidden;
+            opacity: 0;
+            transition: max-width 0.25s ease, opacity 0.25s ease;
+        }
+        .sidebar:hover .sidebar-item .label {
+            max-width: 200px;
+            opacity: 1;
+        }
+    </style>
+</head>
+<body class="bg-white min-h-screen flex flex-col">
+    <!-- Navigation Bar -->
+    <nav class="bg-white border-b border-gray-200 flex-shrink-0">
+        <div class="px-4 py-3 flex items-center justify-between">
+            <a href="{% url 'home' %}" class="text-2xl font-bold text-black">💬 PyChat</a>
+            <ul class="flex items-center gap-4">
+                {% if user.is_authenticated %}
+                    <li class="text-gray-600 flex items-center gap-2">
+                        Welcome, <span class="font-semibold text-black">{{ user.username }}</span>!
+                        {% if user.is_staff or user.is_superuser %}
+                            <span class="inline-flex items-center px-2.5 py-1 rounded-full bg-amber-100 text-amber-800 text-xs font-semibold">Admin</span>
+                        {% endif %}
+                    </li>
+                    {% if user.is_staff or user.is_superuser %}
+                        <li>
+                            <a href="{% url 'admin:index' %}" class="text-indigo-600 hover:text-indigo-800 font-semibold transition-colors">Admin Dashboard</a>
+                        </li>
+                    {% endif %}
+                    <li>
+                        <a href="{% url 'accounts:logout' %}" class="text-gray-600 hover:text-black transition-colors">Logout</a>
+                    </li>
+                {% else %}
+                    <li>
+                        <a href="{% url 'accounts:login' %}" class="text-gray-600 hover:text-black transition-colors">Login</a>
+                    </li>
+                    <li>
+                        <a href="{% url 'accounts:register' %}" class="text-gray-600 hover:text-black transition-colors">Register</a>
+                    </li>
+                {% endif %}
+            </ul>
+        </div>
+    </nav>
+
+    {% if user.is_authenticated %}
+    <div class="flex flex-1 overflow-hidden">
+        <!-- Sidebar -->
+        <aside class="sidebar w-18 bg-slate-950 text-white flex flex-col items-stretch overflow-hidden z-50 flex-shrink-0">
+            <nav class="flex-1 flex flex-col">
+                <a href="{% url 'conversation_list' %}" class="sidebar-item flex items-center gap-3 px-4 py-4 text-white text-opacity-80 hover:bg-white hover:bg-opacity-10 hover:text-white transition-colors {% if request.resolver_match.url_name == 'conversation_list' or request.resolver_match.url_name == 'conversation_detail' %}bg-white bg-opacity-10 text-white{% endif %}">
+                    <span class="icon text-xl">💬</span>
+                    <span class="label whitespace-nowrap">Chats</span>
+                </a>
+                <a href="{% url 'friends' %}" class="sidebar-item flex items-center gap-3 px-4 py-4 text-white text-opacity-80 hover:bg-white hover:bg-opacity-10 hover:text-white transition-colors {% if request.resolver_match.url_name == 'friends' %}bg-white bg-opacity-10 text-white{% endif %}">
+                    <span class="icon text-xl">🧑‍🤝‍🧑</span>
+                    <span class="label whitespace-nowrap">Friends</span>
+                </a>
+                <a href="{% url 'accounts:profile' %}" class="sidebar-item flex items-center gap-3 px-4 py-4 text-white text-opacity-80 hover:bg-white hover:bg-opacity-10 hover:text-white transition-colors {% if request.resolver_match.url_name == 'profile' %}bg-white bg-opacity-10 text-white{% endif %}">
+                    <span class="icon text-xl">👤</span>
+                    <span class="label whitespace-nowrap">Profile</span>
+                </a>
+                <a href="{% url 'accounts:settings' %}" class="sidebar-item flex items-center gap-3 px-4 py-4 text-white text-opacity-80 hover:bg-white hover:bg-opacity-10 hover:text-white transition-colors {% if request.resolver_match.url_name == 'settings' %}bg-white bg-opacity-10 text-white{% endif %}">
+                    <span class="icon text-xl">⚙️</span>
+                    <span class="label whitespace-nowrap">Settings</span>
+                </a>
+            </nav>
+        </aside>
+        
+        <!-- Main Content -->
+        <div class="flex-1 flex flex-col overflow-y-auto">
+    {% endif %}
+
+    <!-- Messages -->
+    {% if messages %}
+        <div class="px-4 pt-4">
+            {% for message in messages %}
+                <div class="mb-4 p-4 rounded-lg bg-blue-100 border border-blue-400 text-blue-700">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    <!-- Content Container -->
+    <div class="flex-1 px-4 py-6">
+        <div class="bg-white rounded-lg shadow-md p-10">
+            {% block content %}{% endblock %}
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="text-center text-gray-500 py-6 mt-12 border-t border-gray-200">
+        <p>&copy; 2026 PyChat. All rights reserved.</p>
+    </footer>
+
+    {% if user.is_authenticated %}
+        </div>
+    </div>
+    {% endif %}
+
+    {% block extra_js %}{% endblock %}
+</body>
+</html>
