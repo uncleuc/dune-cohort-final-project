@@ -37,11 +37,18 @@ SECRET_KEY = 'django-insecure-%1mwf9+g%oh$+3-2m^dnm98r56%x2*3i1%7=a&*m35!d**vo@f
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = False
 
+RENDER_EXTERNAL_HOSTNAME = os.environ.get('RENDER_EXTERNAL_HOSTNAME')
+
 ALLOWED_HOSTS = [
     'localhost',
     '127.0.0.1',
-    'ai.softshell-diminished.ts.net',  # add your Tailscale MagicDNS hostname
+    'ai.softshell-diminished.ts.net',
+    'pychat.onrender.com',
+    'pychat-kmn3.onrender.com',
 ]
+
+if RENDER_EXTERNAL_HOSTNAME:
+    ALLOWED_HOSTS.append(RENDER_EXTERNAL_HOSTNAME)
 
 # Trusted origins for CSRF (include scheme + host, include port if nonstandard)
 CSRF_TRUSTED_ORIGINS = [
@@ -49,7 +56,13 @@ CSRF_TRUSTED_ORIGINS = [
     'http://ai.softshell-diminished.ts.net',
     'https://ai.softshell-diminished.ts.net',
     'https://ai.softshell-diminished.ts.net:8000',
+    'https://pychat.onrender.com',
+    'https://pychat-kmn3.onrender.com',
 ]
+
+if RENDER_EXTERNAL_HOSTNAME:
+    CSRF_TRUSTED_ORIGINS.append(f'https://{RENDER_EXTERNAL_HOSTNAME}')
+    CSRF_TRUSTED_ORIGINS.append(f'http://{RENDER_EXTERNAL_HOSTNAME}')
 
 
 # Application definition
