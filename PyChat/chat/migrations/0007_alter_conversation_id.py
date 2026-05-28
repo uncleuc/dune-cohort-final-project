@@ -2,6 +2,7 @@
 
 import uuid
 
+import chat.models
 from django.db import migrations, models
 
 
@@ -44,10 +45,10 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.RunPython(_normalize_legacy_conversation_ids, migrations.RunPython.noop),
         migrations.AlterField(
             model_name='conversation',
             name='id',
-            field=models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False),
+            field=models.CharField(default=chat.models.generate_conversation_id, editable=False, max_length=32, primary_key=True, serialize=False),
         ),
+        migrations.RunPython(_normalize_legacy_conversation_ids, migrations.RunPython.noop),
     ]
