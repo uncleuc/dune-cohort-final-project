@@ -43,6 +43,15 @@ def get_friends(user):
     return User.objects.filter(id__in=friend_ids).exclude(id__in=blocked_ids)
 
 
+def get_avatar_url(user):
+    profile = getattr(user, 'account_profile', None)
+    return profile.profile_picture.url if profile and profile.profile_picture else None
+
+
+def get_other_user(conversation, user):
+    return conversation.participants.exclude(id=user.id).first()
+
+
 @login_required
 @require_http_methods(["GET", "POST"])
 def find_friends_view(request):
@@ -99,6 +108,9 @@ def find_friends_view(request):
     users = User.objects.exclude(id__in=excluded_ids)
     if search_query:
         users = users.filter(username__icontains=search_query)
+
+    for user_item in users:
+        user_item.avatar_url = get_avatar_url(user_item)
 
     return render(request, 'chat/find_friends.html', {
         'incoming_requests': incoming_requests,
@@ -195,6 +207,8 @@ def conversation_list(request):
             messages = conversation.messages.all().order_by('-created_at')
             conversation.last_message = messages.first()
             conversation.display_name = get_conversation_display_name(request.user, conversation)
+            conversation.other_user = get_other_user(conversation, request.user)
+            conversation.avatar_url = get_avatar_url(conversation.other_user) if conversation.other_user else None
             conversation.unread_count = get_unread_count(conversation, request.user)
             conversation.sort_key = conversation.last_message.created_at if conversation.last_message else conversation.created_at
             conversations.append(conversation)
@@ -224,9 +238,11 @@ def conversation_detail(request, conversation_id):
     conversation.display_name = get_conversation_display_name(request.user, conversation)
     other_presence = None
     if not conversation.is_group:
-        other_user = conversation.participants.exclude(id=request.user.id).first()
+        other_user = get_other_user(conversation, request.user)
         if other_user:
             other_presence = Presence.objects.filter(user=other_user).first()
+            conversation.other_user = other_user
+            conversation.avatar_url = get_avatar_url(other_user)
 
     return render(request, 'chat/conversation_detail.html', {
         'conversation': conversation,
@@ -270,6 +286,8 @@ def conversation_action(request, conversation_id):
 @login_required
 def friends_view(request):
     friends = get_friends(request.user)
+    for friend in friends:
+        friend.avatar_url = get_avatar_url(friend)
     return render(request, 'chat/friends.html', {
         'friends': friends,
     })

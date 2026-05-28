@@ -17,9 +17,21 @@
                     {% endfor %}
                 </div>
             {% endif %}
-            <form method="post" class="space-y-6">
+            <form method="post" enctype="multipart/form-data" class="space-y-6" id="settings-form">
                 {% csrf_token %}
                 <div class="grid gap-6 sm:grid-cols-1">
+                    <div class="p-4 rounded-lg border border-gray-200 bg-slate-50">
+                        <label class="block text-gray-900 font-semibold mb-2">Profile picture</label>
+                        <p class="text-sm text-gray-600 mb-3">Upload a photo to show on your profile, chat list, and friend pages.</p>
+                        <div class="flex items-center gap-4 mb-4">
+                            <div id="avatar-preview" class="w-20 h-20 rounded-full bg-gradient-to-br from-indigo-600 to-purple-600 flex items-center justify-center text-white text-2xl font-bold overflow-hidden flex-shrink-0 border border-gray-200">
+                                <span id="avatar-fallback">{{ user.username|first|upper }}</span>
+                            </div>
+                            <span class="text-sm text-gray-600">Preview will update as soon as you choose a file.</span>
+                        </div>
+                        {{ form.profile_picture }}
+                    </div>
+
                     <label class="flex items-center gap-3 p-4 rounded-lg border border-gray-200 bg-slate-50">
                         {{ form.email_notifications }}
                         <span>
@@ -49,4 +61,26 @@
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const input = document.querySelector('input[type="file"][name="profile_picture"]');
+    const preview = document.getElementById('avatar-preview');
+    const fallback = document.getElementById('avatar-fallback');
+    if (input && preview) {
+        input.addEventListener('change', function () {
+            const [file] = this.files || [];
+            if (!file) {
+                preview.innerHTML = fallback ? fallback.outerHTML : '';
+                return;
+            }
+            const reader = new FileReader();
+            reader.onload = function (event) {
+                preview.innerHTML = `<img src="${event.target.result}" alt="Profile preview" class="w-full h-full object-cover" />`;
+            };
+            reader.readAsDataURL(file);
+        });
+    }
+</script>
 {% endblock %}

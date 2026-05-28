@@ -49,7 +49,15 @@
 <div class="chat-container">
     <!-- Chat Header -->
     <div class="chat-header px-6 py-4 border-b border-gray-200 flex justify-between items-start">
-        <div>
+        <div class="flex items-center gap-3">
+            <div class="w-12 h-12 rounded-full bg-gradient-to-br from-indigo-600 to-purple-600 flex items-center justify-center text-white text-lg font-bold overflow-hidden flex-shrink-0">
+                {% if conversation.avatar_url %}
+                    <img src="{{ conversation.avatar_url }}" alt="{{ conversation.display_name }}" class="w-full h-full object-cover" />
+                {% else %}
+                    {{ conversation.display_name|first|upper }}
+                {% endif %}
+            </div>
+            <div>
             <h2 class="text-lg font-semibold text-gray-900 m-0">{{ conversation.display_name|default:conversation.name|default:"Conversation" }}</h2>
             <div class="text-sm text-gray-600 mt-1">
                 {% if conversation.is_group %}
@@ -58,8 +66,9 @@
                     Private
                 {% endif %}
             </div>
-            <div class="text-sm text-gray-600 mt-1" id="presence-status">Connecting...</div>
+            <div class="text-sm text-gray-600 mt-1" id="presence-status">Loading latest activity…</div>
             <div class="text-sm text-indigo-600 mt-1" id="typing-indicator"></div>
+            </div>
         </div>
         <div id="message-context-menu" class="hidden absolute z-50 w-44 rounded-lg border border-gray-200 bg-white shadow-lg py-2">
             <button type="button" data-action="edit" class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Edit Message</button>
@@ -132,14 +141,13 @@
     const historyUrl = '{% url "message_history" conversation.id %}';
     const editUrlTemplate = '{% url "edit_message" 0 %}';
     const deleteUrlTemplate = '{% url "delete_message" 0 %}';
-    const statusEl = document.getElementById('ws-status');
     const presenceEl = document.getElementById('presence-status');
     const typingEl = document.getElementById('typing-indicator');
     const messagesDiv = document.getElementById('messages');
     const messageContextMenu = document.getElementById('message-context-menu');
     const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
     const contentInput = document.getElementById('id_content');
-    const otherLastSeen = '{% if other_presence and other_presence.last_seen %}{{ other_presence.last_seen|date:"c" }}{% endif %}';
+    const lastMessageAt = '{% if conversation.messages.last and conversation.messages.last.created_at %}{{ conversation.messages.last.created_at|date:"c" }}{% endif %}';
     const otherUserName = '{% if other_presence %}{{ other_presence.user.username }}{% else %}{{ "" }}{% endif %}';
     let ws = null;
     let pendingMessages = [];
@@ -148,23 +156,7 @@
     let activeMessageId = null;
     let activeMessageText = '';
 
-    function setStatus(text, type = 'secondary') {
-        statusEl.classList.remove('hidden', 'bg-blue-100', 'border-blue-300', 'text-blue-800', 'bg-green-100', 'border-green-300', 'text-green-800', 'bg-yellow-100', 'border-yellow-300', 'text-yellow-800', 'bg-red-100', 'border-red-300', 'text-red-800');
-        
-        const classMap = {
-            'secondary': ['bg-blue-100', 'border-blue-300', 'text-blue-800'],
-            'success': ['bg-green-100', 'border-green-300', 'text-green-800'],
-            'warning': ['bg-yellow-100', 'border-yellow-300', 'text-yellow-800'],
-            'danger': ['bg-red-100', 'border-red-300', 'text-red-800'],
-            'info': ['bg-blue-100', 'border-blue-300', 'text-blue-800'],
-        };
-        
-        const classes = classMap[type] || classMap['secondary'];
-        classes.forEach(cls => statusEl.classList.add(cls));
-        
-        statusEl.classList.remove('hidden');
-        statusEl.textContent = text;
-    }
+    function setStatus() {}
 
     function formatLocalTime(timestamp) {
         if (!timestamp) {
@@ -185,12 +177,12 @@
             return;
         }
 
-        if (otherLastSeen) {
-            presenceEl.textContent = `${otherUserName} last seen ${formatLocalTime(otherLastSeen)}`;
+        if (lastMessageAt) {
+            presenceEl.textContent = `Last message ${formatLocalTime(lastMessageAt)}`;
             return;
         }
 
-        presenceEl.textContent = 'Offline';
+        presenceEl.textContent = 'No messages yet';
     }
 
     function updateTyping(user, isTyping) {
@@ -371,7 +363,7 @@
         const conversationId = '{{ conversation.id }}';
         const readNotif = {
             type: 'notification.message',
-            conversation_id: parseInt(conversationId),
+            conversation_id: conversationId,
             unread_count: 0,
             sender: '{{ user.username }}',
             last_message: '',

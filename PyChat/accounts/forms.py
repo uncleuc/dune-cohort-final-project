@@ -66,6 +66,11 @@ class UserLoginForm(forms.Form):
 
 
 class UserSettingsForm(forms.Form):
+    profile_picture = forms.ImageField(
+        required=False,
+        label='Profile picture',
+        widget=forms.FileInput(attrs={'class': 'block w-full text-sm text-gray-600 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:bg-indigo-100 file:text-indigo-700 hover:file:bg-indigo-200'}),
+    )
     email_notifications = forms.BooleanField(
         required=False,
         label='Email notifications',

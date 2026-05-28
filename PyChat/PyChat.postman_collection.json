@@ -1,0 +1,243 @@
+{
+  "info": {
+    "_postman_id": "44118c35-dc28-49a3-8fe9-1a641523fda2",
+    "name": "PyChat",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "26568539"
+  },
+  "item": [
+    {
+      "name": "Token Auth",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Status code is 200\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test(\"Token received and saved\", function () {",
+              "    var jsonData = pm.response.json();",
+              "    pm.expect(jsonData.token).to.be.a(\"string\");",
+              "    pm.environment.set(\"access_token\", jsonData.token);",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "urlencoded",
+          "urlencoded": [
+            {
+              "type": "text",
+              "key": "username",
+              "value": "kelvin"
+            },
+            {
+              "type": "text",
+              "key": "password",
+              "value": "admin"
+            }
+          ]
+        },
+        "url": {
+          "raw": "https://ai.softshell-diminished.ts.net/api/token-auth/",
+          "protocol": "https",
+          "host": [
+            "ai",
+            "softshell-diminished",
+            "ts",
+            "net"
+          ],
+          "path": [
+            "api",
+            "token-auth",
+            ""
+          ]
+        },
+        "description": "Generated from cURL: curl -X POST https://ai.softshell-diminished.ts.net/api/token-auth/ --data-urlencode \"username=kelvin\" --data-urlencode \"password=admin\""
+      },
+      "response": []
+    },
+    {
+      "name": "JWT Auth",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "disabled": false
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"username\": \"kelvin\", \"password\": \"admin\"}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "https://ai.softshell-diminished.ts.net/api/token/",
+          "protocol": "https",
+          "host": [
+            "ai",
+            "softshell-diminished",
+            "ts",
+            "net"
+          ],
+          "path": [
+            "api",
+            "token",
+            ""
+          ]
+        },
+        "description": "Generated from cURL: curl -X POST https://ai.softshell-diminished.ts.net/api/token/ -H \"Content-Type: application/json\" -d \"{\\\"username\\\": \\\"kelvin\\\", \\\"password\\\": \\\"admin\\\"}\""
+      },
+      "response": []
+    },
+    {
+      "name": "Get Current User",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{access_token}}",
+            "disabled": false
+          }
+        ],
+        "url": {
+          "raw": "https://ai.softshell-diminished.ts.net/api/accounts/me/",
+          "protocol": "https",
+          "host": [
+            "ai",
+            "softshell-diminished",
+            "ts",
+            "net"
+          ],
+          "path": [
+            "api",
+            "accounts",
+            "me",
+            ""
+          ]
+        },
+        "description": "Generated from cURL: curl -X GET \"https://ai.softshell-diminished.ts.net/api/accounts/kelvin/\" -H \"Authorization: Bearer {{access_token}}\""
+      },
+      "response": []
+    },
+    {
+      "name": "List Accounts",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{access_token}}",
+            "disabled": false
+          }
+        ],
+        "url": {
+          "raw": "https://ai.softshell-diminished.ts.net/api/accounts/",
+          "protocol": "https",
+          "host": [
+            "ai",
+            "softshell-diminished",
+            "ts",
+            "net"
+          ],
+          "path": [
+            "api",
+            "accounts",
+            ""
+          ]
+        },
+        "description": "Generated from cURL: curl -X GET \"https://ai.softshell-diminished.ts.net/api/accounts/\" -H \"Authorization: Bearer {{access_token}}\""
+      },
+      "response": []
+    },
+    {
+      "name": "Create New User",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{access_token}}",
+            "disabled": false
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "disabled": false
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"username\": \"tester2\", \"email\": \"tester2@example.com\", \"password\": \"StrongPass123!\", \"is_staff\": false, \"is_active\": true}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "https://ai.softshell-diminished.ts.net/api/accounts/",
+          "protocol": "https",
+          "host": [
+            "ai",
+            "softshell-diminished",
+            "ts",
+            "net"
+          ],
+          "path": [
+            "api",
+            "accounts",
+            ""
+          ]
+        },
+        "description": "Generated from cURL: curl -X POST \"https://ai.softshell-diminished.ts.net/api/accounts/\" -H \"Authorization: Bearer {{access_token}}\" -H \"Content-Type: application/json\" -d \"{\\\"username\\\": \\\"tester2\\\", \\\"email\\\": \\\"tester2@example.com\\\", \\\"password\\\": \\\"StrongPass123!\\\", \\\"is_staff\\\": false, \\\"is_active\\\": true}\""
+      },
+      "response": []
+    },
+    {
+      "name": "Delete User (testuser)",
+      "request": {
+        "method": "DELETE",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{access_token}}",
+            "disabled": false
+          }
+        ],
+        "url": {
+          "raw": "https://ai.softshell-diminished.ts.net/api/accounts/tester2/",
+          "protocol": "https",
+          "host": [
+            "ai",
+            "softshell-diminished",
+            "ts",
+            "net"
+          ],
+          "path": [
+            "api",
+            "accounts",
+            "tester2",
+            ""
+          ]
+        },
+        "description": "Generated from cURL: curl -X DELETE \"https://ai.softshell-diminished.ts.net/api/accounts/tester2/\" -H \"Authorization: Bearer {{access_token}}\""
+      },
+      "response": []
+    }
+  ]
+}

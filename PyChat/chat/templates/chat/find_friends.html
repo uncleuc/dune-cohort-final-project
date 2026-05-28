@@ -61,9 +61,18 @@
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         {% for user_item in users %}
                             <div class="border border-gray-200 rounded-lg p-4 flex flex-col justify-between gap-4">
-                                <div>
-                                    <p class="text-lg font-semibold text-gray-900">{{ user_item.username }}</p>
-                                    <p class="text-gray-600 text-sm">{{ user_item.email }}</p>
+                                <div class="flex items-center gap-3">
+                                    <div class="w-14 h-14 rounded-full bg-gradient-to-br from-indigo-600 to-purple-600 flex items-center justify-center text-white text-lg font-bold overflow-hidden flex-shrink-0">
+                                        {% if user_item.avatar_url %}
+                                            <img src="{{ user_item.avatar_url }}" alt="{{ user_item.username }}" class="w-full h-full object-cover" />
+                                        {% else %}
+                                            {{ user_item.username|first|upper }}
+                                        {% endif %}
+                                    </div>
+                                    <div>
+                                        <p class="text-lg font-semibold text-gray-900">{{ user_item.username }}</p>
+                                        <p class="text-gray-600 text-sm">{{ user_item.email }}</p>
+                                    </div>
                                 </div>
                                 <form method="post" class="text-right">
                                     {% csrf_token %}

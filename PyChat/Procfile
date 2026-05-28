@@ -1,0 +1,1 @@
+web: gunicorn PyChat.wsgi:application --log-file -

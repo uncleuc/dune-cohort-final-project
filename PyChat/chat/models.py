@@ -1,8 +1,20 @@
+import uuid
+
 from django.conf import settings
 from django.db import models
 
 
+def generate_conversation_id():
+    return str(uuid.uuid4())
+
+
 class Conversation(models.Model):
+    id = models.CharField(
+        primary_key=True,
+        default=generate_conversation_id,
+        editable=False,
+        max_length=32,
+    )
     name = models.CharField(max_length=255, blank=True)
     participants = models.ManyToManyField(
         settings.AUTH_USER_MODEL,
@@ -19,6 +31,7 @@ class Conversation(models.Model):
         blank=True,
     )
     is_group = models.BooleanField(default=False)
+    is_favorite = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

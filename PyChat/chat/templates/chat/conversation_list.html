@@ -27,11 +27,11 @@
             </div>
             
             <!-- Filter Tabs -->
-            <div class="flex gap-2 overflow-x-auto pb-4 -px-5">
-                <button class="px-4 py-2 bg-indigo-600 text-white border border-indigo-600 rounded-full text-sm font-medium whitespace-nowrap hover:bg-indigo-700 transition-colors">All</button>
-                <button class="px-4 py-2 bg-transparent text-gray-900 border border-gray-300 rounded-full text-sm font-medium whitespace-nowrap hover:bg-gray-100 transition-colors">Unread</button>
-                <button class="px-4 py-2 bg-transparent text-gray-900 border border-gray-300 rounded-full text-sm font-medium whitespace-nowrap hover:bg-gray-100 transition-colors">Favourites</button>
-                <button class="px-4 py-2 bg-transparent text-gray-900 border border-gray-300 rounded-full text-sm font-medium whitespace-nowrap hover:bg-gray-100 transition-colors">Groups</button>
+            <div class="flex gap-2 overflow-x-auto pb-4 -px-5" id="conversation-filters">
+                <button type="button" data-filter="all" class="filter-chip px-4 py-2 bg-indigo-600 text-white border border-indigo-600 rounded-full text-sm font-medium whitespace-nowrap hover:bg-indigo-700 transition-colors">All</button>
+                <button type="button" data-filter="unread" class="filter-chip px-4 py-2 bg-transparent text-gray-900 border border-gray-300 rounded-full text-sm font-medium whitespace-nowrap hover:bg-gray-100 transition-colors">Unread</button>
+                <button type="button" data-filter="favorites" class="filter-chip px-4 py-2 bg-transparent text-gray-900 border border-gray-300 rounded-full text-sm font-medium whitespace-nowrap hover:bg-gray-100 transition-colors">Favorites</button>
+                <button type="button" data-filter="groups" class="filter-chip px-4 py-2 bg-transparent text-gray-900 border border-gray-300 rounded-full text-sm font-medium whitespace-nowrap hover:bg-gray-100 transition-colors">Groups</button>
             </div>
         </div>
         
@@ -39,10 +39,14 @@
         <div class="flex-1 overflow-y-auto">
             {% if conversations %}
                 {% for conversation in conversations %}
-                        <a href="{% url 'conversation_detail' conversation.id %}" class="conversation-item flex items-center gap-3 px-5 py-3 border-b border-gray-100 hover:bg-gray-50 transition-colors text-decoration-none text-inherit" data-conversation-id="{{ conversation.id }}" data-unread-count="{{ conversation.unread_count }}">
+                        <a href="{% url 'conversation_detail' conversation.id %}" class="conversation-item flex items-center gap-3 px-5 py-3 border-b border-gray-100 hover:bg-gray-50 transition-colors text-decoration-none text-inherit" data-conversation-id="{{ conversation.id }}" data-unread-count="{{ conversation.unread_count }}" data-is-group="{{ conversation.is_group|yesno:'true,false' }}" data-is-favorite="{{ conversation.is_favorite|yesno:'true,false' }}">
                         <!-- Avatar -->
-                        <div class="w-14 h-14 rounded-full bg-gradient-to-br from-indigo-600 to-purple-600 flex items-center justify-center text-white text-lg font-bold flex-shrink-0">
-                            {{ conversation.display_name|first|upper }}
+                        <div class="w-14 h-14 rounded-full bg-gradient-to-br from-indigo-600 to-purple-600 flex items-center justify-center text-white text-lg font-bold flex-shrink-0 overflow-hidden">
+                            {% if conversation.avatar_url %}
+                                <img src="{{ conversation.avatar_url }}" alt="{{ conversation.display_name }}" class="w-full h-full object-cover" />
+                            {% else %}
+                                {{ conversation.display_name|first|upper }}
+                            {% endif %}
                         </div>
                         
                         <!-- Conversation Info -->
@@ -106,7 +110,40 @@
 
 <script>
     const contextMenu = document.getElementById('conversation-context-menu');
+    const filterButtons = document.querySelectorAll('.filter-chip');
+    const items = document.querySelectorAll('.conversation-item');
     let activeConversationId = null;
+    let activeFilter = 'all';
+
+    function applyConversationFilter(filter) {
+        activeFilter = filter;
+        items.forEach(item => {
+            const unread = Number(item.dataset.unreadCount || 0);
+            const isGroup = item.dataset.isGroup === 'true';
+            const isFavorite = item.dataset.isFavorite === 'true';
+            let show = true;
+            if (filter === 'unread') show = unread > 0;
+            if (filter === 'favorites') show = isFavorite;
+            if (filter === 'groups') show = isGroup;
+            item.style.display = show ? '' : 'none';
+        });
+        filterButtons.forEach(button => {
+            const active = button.dataset.filter === filter;
+            button.classList.toggle('bg-indigo-600', active);
+            button.classList.toggle('text-white', active);
+            button.classList.toggle('border-indigo-600', active);
+            button.classList.toggle('hover:bg-indigo-700', active);
+            button.classList.toggle('bg-transparent', !active);
+            button.classList.toggle('text-gray-900', !active);
+            button.classList.toggle('border-gray-300', !active);
+            button.classList.toggle('hover:bg-gray-100', !active);
+        });
+    }
+
+    filterButtons.forEach(button => {
+        button.addEventListener('click', () => applyConversationFilter(button.dataset.filter || 'all'));
+    });
+    applyConversationFilter(activeFilter);
 
     function getCookie(name) {
         const value = `; ${document.cookie}`;

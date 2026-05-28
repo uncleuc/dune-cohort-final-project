@@ -5,6 +5,7 @@ from django.shortcuts import redirect, render
 from django.views.decorators.http import require_http_methods
 
 from .forms import UserLoginForm, UserRegistrationForm, UserSettingsForm
+from .models import AccountProfile
 
 
 @require_http_methods(["GET", "POST"])
@@ -61,8 +62,13 @@ def profile_view(request):
 @require_http_methods(["GET", "POST"])
 def settings_view(request):
     if request.method == 'POST':
-        form = UserSettingsForm(request.POST)
+        form = UserSettingsForm(request.POST, request.FILES)
         if form.is_valid():
+            profile, _ = AccountProfile.objects.get_or_create(user=request.user)
+            profile_picture = form.cleaned_data.get('profile_picture')
+            if profile_picture:
+                profile.profile_picture = profile_picture
+                profile.save(update_fields=['profile_picture'])
             messages.success(request, 'Your settings have been updated.')
             return redirect('accounts:settings')
     else:

@@ -23,6 +23,7 @@ from django.views.static import serve
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('accounts/', include('accounts.urls')),
+    path('api/', include('PyChat.api_urls')),
     path('', include('chat.urls')),
 ]
 
