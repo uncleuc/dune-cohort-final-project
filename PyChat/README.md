@@ -1,101 +1,196 @@
 # PyChat
 
-A real-time chat application scaffold built with Django and Django Channels.
+PyChat is a Django + Channels real-time messaging application designed for direct conversations, group chats, profile management, and admin-controlled API access. It is built to help users communicate quickly in a polished web interface while also exposing a secure REST API for admin workflows.
 
-## Current Status
+> Live Demo: https://pychat-knm3.onrender.com
 
-- Django project scaffolded in `PyChat/`
-- `chat` app created with models, admin, and consumers
-- Channels integration configured for WebSocket real-time messaging
-- User authentication (login, logout, register)
-- Chat conversation management (create, list, view)
-- Message persistence and real-time updates via WebSockets
-- Admin-only REST API endpoints under `/api/` with Token Auth and JWT support
-- Conversation list filter chips now control All / Unread / Favorites / Groups visibility
-- Database migrations applied
+## 1. Project Overview
 
-## Project Structure
+PyChat combines a full-featured chat experience with a production-ready deployment setup on Render. The project includes:
 
-- `PyChat/` - Django project settings, ASGI configuration, and project URLs
-- `PyChat/accounts/` - User account management (registration, login, profile, settings)
-- `PyChat/chat/` - Chat application models, admin, routing, consumers, views, and templates
-- `.venv/` - Python virtual environment
+- real-time chat rooms and direct messaging
+- profile, settings, and friends management
+- attachment uploads and conversation history
+- an admin-focused REST API with Token Auth and JWT
+- WhiteNoise static file serving for deployment
 
-### App Organization
+This project is intended for developers, instructors, and reviewers who need a complete Django chat app with working deployment and testable API behavior.
 
-**Accounts App** (`accounts/`)
-- User registration, login/logout
-- User profile and account settings
-- Account-related views and templates
+## 2. Features Implemented
 
-**Chat App** (`chat/`)
-- Real-time messaging via WebSockets
-- Conversation and message models
-- Friend system and blocking functionality
-- Chat views and consumer classes
-- Chat-related templates
+### Web Application Features
+- User registration, login, logout, and protected access to chat features
+- Profile page and settings page with account customization
+- Friends and find-friends workflows
+- Direct conversation creation and group conversation creation
+- Conversation listing with latest activity ordering
+- Unread, favorite, and group conversation filters
+- Real-time chat via Django Channels WebSockets
+- Message persistence and chat history
+- Attachment upload support for conversations
+- Admin navigation and admin UI styling
+- WhiteNoise static file serving for production deployment
 
-Additional files and templates:
+### API / Admin Features
+- Admin-only user management API under `/api/`
+- Token authentication endpoint for simple API access
+- JWT authentication for modern token-based auth
+- Current-user endpoint for admin session validation
+- Postman/REST collection included for API testing
 
-- `PyChat/accounts/templates/accounts/` - Account management templates (register, login, profile, settings)
-- `PyChat/chat/templates/chat/` - Chat-related templates (conversation list, detail, friends, etc.)
-- `PyChat/chat/models.py` — Conversation, Message, FriendRequest, Block, and Presence models
-- `PyChat/chat/consumers.py` — WebSocket consumers for real-time chat and notifications with presence tracking
-- `PyChat/chat/routing.py` — WebSocket URL routing configuration
+## 3. Tech Stack
 
-## Documentation Policy
+- Python 3.14 / Django 6.0.5
+- Django Channels 4.3.2 for real-time WebSockets
+- Django REST Framework 3.16.0
+- djangorestframework-simplejwt for JWT
+- PostgreSQL on Render
+- WhiteNoise for static files in production
+- Gunicorn for WSGI serving
+- Pillow for profile/avatar support
+- dj-database-url and python-decouple for environment-based configuration
 
-All future changes, features, and new files will be documented in this README under the appropriate section.
+## 4. Project Structure
 
-### Change Log
+- `PyChat/` — Django project settings, ASGI/WSGI entry points, and main URL routing
+- `accounts/` — registration, login, profile, and settings views
+- `chat/` — conversation models, consumers, templates, and WebSocket routing
+- `screenshots/` — UI and API testing screenshots
+- `data.json` — fixture data for Render/PostgreSQL import
+- `requirements.txt` — production dependencies
+- `api_docs.md` — API overview and endpoint notes
 
-- **2026-05-26**: Reorganized user account management into dedicated `accounts` app; moved register, login, logout, profile, and settings views and templates from `chat` to `accounts`; updated URL routing to use namespace for account URLs
-- **2026-05-24**: Added WhatsApp-style two-column layout with collapsible icon sidebar; created friends, profile, and settings pages; wired sidebar links
-- **2026-05-24**: Reworked conversation list into left-side panel with conversation preview/selection behavior
-- **2026-05-24**: Added file upload endpoint (`upload_attachment`) and attachment metadata broadcasting for real-time rendering
-- **2026-05-24**: Updated conversation detail view with attachment uploads, WebSocket fallback polling, and attachment link display
-- **2026-05-24**: Added development media serving for attachments when `DEBUG=True`
-- **2026-05-11**: Initialized Django project and created `chat` app with models, admin, views, and WebSocket consumers
-- **2026-05-11**: Generated initial database migrations
-- **2026-05-11**: Added user authentication system (register, login, logout)
-- **2026-05-11**: Created base template with Bootstrap 5 styling and responsive navbar
-- **2026-05-11**: Implemented conversation and message management with real-time updates via WebSockets
+## 5. API Documentation
 
-## Technical Compliance Audit
+The project exposes the following API endpoints under `/api/`:
 
-### Completed features
-- Real-time chat with Django Channels and WebSockets
-- DB-backed message persistence and attachment uploads
-- User registration, login, logout, and protected chat views
-- Friend system, direct conversation creation, and group chat creation
-- Conversation list ordering by latest activity and live unread badge updates
-- Conversation filters now work for All / Unread / Favorites / Groups
-- Admin-only REST API endpoints, Token Auth, and JWT support under `/api/`
-- `api_docs.md` added for the API endpoints
-- Channel layer configured with `InMemoryChannelLayer` for local development
-- Django system checks pass with `manage.py check`
+| Method | Endpoint | Auth | Description | Example response |
+|---|---|---|---|---|
+| POST | `/api/token-auth/` | Public | Obtain a Token auth token | `{ "token": "..." }` |
+| POST | `/api/token/` | Public | Obtain JWT access/refresh tokens | `{ "access": "...", "refresh": "..." }` |
+| POST | `/api/token/refresh/` | Public | Refresh JWT token | `{ "access": "..." }` |
+| GET | `/api/accounts/` | Admin required | List users | `[ { "id": 1, "username": "admin", "email": "..." } ]` |
+| POST | `/api/accounts/` | Admin required | Create a user | `{ "id": 2, "username": "newuser", "email": "..." }` |
+| GET | `/api/accounts/<username>/` | Admin required | Retrieve a user | `{ "id": 2, "username": "newuser", "email": "..." }` |
+| PUT/PATCH | `/api/accounts/<username>/` | Admin required | Update a user | Updated user JSON |
+| DELETE | `/api/accounts/<username>/` | Admin required | Delete a user | `204 No Content` |
+| GET | `/api/accounts/me/` | Admin required | Return current authenticated admin | Current admin profile JSON |
 
-### Remaining tasks (next steps)
-- Add automated tests for chat views, models, consumers, and notification flows
-- Add production-grade environment variables and deployment checks for Render
-- Optionally add Redis-backed channel layers for multi-worker production use
-- Verify final admin/API permissions against the course rubric
+## 6. Local Setup Instructions
 
-## Next Steps
+1. Clone the repository
+   ```bash
+   git clone https://github.com/uncleuc/dune-cohort-final-project.git
+   cd dune-cohort-final-project/PyChat
+   ```
 
-1. Add automated tests for project business logic and websocket flows
-2. Create a dependency manifest such as `requirements.txt`
-3. Harden the deployment config for production (Redis, env variables, static/media setup)
-4. Confirm whether a REST API / DRF integration is required by the course rubric
-5. Clean up unused apps or register the `accounts` app if it is intended to be part of the final project
+2. Create and activate a Python virtual environment
+   ```bash
+   python -m venv .venv
+   .\.venv\Scripts\activate
+   ```
+   On macOS/Linux use:
+   ```bash
+   source .venv/bin/activate
+   ```
 
+3. Install dependencies
+   ```bash
+   pip install -r requirements.txt
+   ```
 
-Add deployment documentation and a clear startup guide for the application environment
+4. Create your environment file
+   ```bash
+   copy .env.example .env
+   ```
+   Then update the values for your local machine.
 
-## Next Steps
+5. Apply database migrations
+   ```bash
+   python manage.py migrate
+   ```
 
-1. Add automated tests for project business logic and websocket flows
-2. Create a dependency manifest such as `requirements.txt`
-3. Harden the deployment config for production (Redis, env variables, static/media setup)
-4. Confirm whether a REST API / DRF integration is required by the course rubric# dune-cohort-final-project
-# dune-cohort-final-project
+6. Create an admin user
+   ```bash
+   python manage.py createsuperuser
+   ```
+
+7. Load fixture data (optional but recommended)
+   ```bash
+   python manage.py loaddata data.json
+   ```
+
+8. Run the development server
+   ```bash
+   python manage.py runserver
+   ```
+
+9. Open the app in your browser
+   - Main site: http://127.0.0.1:8000/
+   - Admin: http://127.0.0.1:8000/admin/
+
+## 7. Environment Variables
+
+A sample file is included at `.env.example` in the project root. Copy it to `.env` before running the app.
+
+| Variable | Required | Purpose |
+|---|---|---|
+| `SECRET_KEY` | Yes | Django secret key used for session signing and CSRF protection |
+| `DEBUG` | Yes | Enables debug mode locally (`True`) and disables it in production |
+| `DATABASE_URL` | No | PostgreSQL or SQLite database connection string |
+| `RENDER_EXTERNAL_HOSTNAME` | No | Render host name used for allowed hosts and trusted origins |
+| `CSRF_TRUSTED_ORIGINS` | No | Extra origins allowed for CSRF validation |
+| `REDIS_URL` | No | Optional future Redis configuration for production channels |
+
+## 8. Screenshots
+
+### Website Pages
+
+![Home page](screenshots/00_home_page.png)
+![Registration page](screenshots/01_registration_page.png)
+![Conversation list](screenshots/02_conversation_list.png)
+![Chat panel](screenshots/03_chat_panel.png)
+![Friends page](screenshots/04_friends_page.png)
+![Profile page](screenshots/06_profile_page.png)
+![Settings page](screenshots/07_settings_page.png)
+![Admin navbar preview](screenshots/09_admin_navbar_preview.png)
+
+### API Testing Screenshots
+
+![Auth token obtained](screenshots/01_auth_token_obtained.png)
+![Get current user](screenshots/02_get_current_user.png)
+![Get all users](screenshots/03_get_all_users.png)
+![Create new user](screenshots/04_create_new_user.png)
+![Delete user](screenshots/05_delete_user.png)
+
+## 9. Future Improvements
+
+- Add automated tests for views, models, consumers, and API workflows
+- Add Redis-backed Channels for production multi-worker deployments
+- Improve pagination and search/filtering for larger chat histories
+- Add richer avatar upload and notification UX
+- Expand API coverage with conversation and message management endpoints
+- Voice and Video Call features using WebRTC and Django Channels
+- Optimize database queries and add caching for conversation lists and message retrieval
+- Robust Settings Features for more personalization and user control
+- Add user presence indicators and typing notifications in the chat UI
+- More Admin control directly from the website
+- And much more!
+
+## 10. Deployment Notes
+
+The current deployment target is Render. The project uses:
+
+- `gunicorn` for serving the Django app
+- `whitenoise` for static files
+- `psycopg2-binary` for PostgreSQL support
+- `data.json` for fixture import during deployment
+
+If you deploy on Render, ensure the build command runs:
+
+```bash
+pip install -r requirements.txt
+python manage.py migrate
+python manage.py loaddata data.json
+python manage.py collectstatic --noinput
+```
