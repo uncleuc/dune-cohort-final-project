@@ -13,7 +13,7 @@ class Conversation(models.Model):
         primary_key=True,
         default=generate_conversation_id,
         editable=False,
-        max_length=32,
+        max_length=36,
     )
     name = models.CharField(max_length=255, blank=True)
     participants = models.ManyToManyField(
